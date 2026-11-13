@@ -1,32 +1,20 @@
 package com.example.closed_club.service;
 
-import com.example.closed_club.model.Member;
-import com.example.closed_club.model.QrCode;
-import com.example.closed_club.repository.MemberRepository;
+import com.example.closed_club.dto.ClubEntryResponse;
 import com.example.closed_club.repository.QrCodeRepository;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class ClubService {
     private final QrCodeRepository qrCodeRepository;
-    private final MemberRepository memberRepository;
-
+    @Transactional(readOnly = true)
     public ClubEntryResponse verifyQrCode (UUID code){
-        QrCode oldQrCode = qrCodeRepository.findByCode(code).
-                orElseThrow(() -> new RuntimeException("Вход не разрешен: Qr-код не найден"));
-
-        Member member = oldQrCode.getMember();
-
-        qrCodeRepository.delete(oldQrCode);
-
-        QrCode newQrCode = new QrCode();
-        newQrCode.setCode(UUID.randomUUID());
-        newQrCode.setMember(member);
-
-        QrCode savedQrCode = qrCodeRepository.save(newQrCode);
-        return new ClubEntryResponse(member.getName(), savedQrCode.getCode());
+        return qrCodeRepository.findByCode(code).map(qrCode -> new ClubEntryResponse(true, qrCode.getMember().getName(), "Доступ разрешён")).
+                orElse(new ClubEntryResponse(false, null, "QR-код не найден или недействителен"));
     }
 }
